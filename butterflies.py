@@ -1,8 +1,9 @@
-import bisect
+from bisect import bisect_left
 import pickle
 import numpy
 from graph_tool.all import *
 from collections import defaultdict
+import cProfile
 
 
 #
@@ -84,9 +85,9 @@ def classify_butterflies(butterfly_list, delta_w=0, delta_c=0):
 # Classify a single butterfly based on temporal ordering of the edges.
 #
 def classify_butterfly(butterfly, delta_w=0, delta_c=0):
-    butterfly.sort(key=lambda echo: echo[2])
-    if delta_w == 0 or butterfly[3][2] - butterfly[0][2] < delta_w:
-        if delta_c == 0 or (butterfly[1][2] - butterfly[0][2] < delta_c and butterfly[2][2] - butterfly[1][2] < delta_c and butterfly[3][2] - butterfly[2][2] < delta_c):
+    if delta_c == 0 or abs(butterfly[1][2] - butterfly[0][2]) < delta_c and abs(butterfly[2][2] - butterfly[0][2]) < delta_c and abs(butterfly[3][2] - butterfly[1][2]) < delta_c and abs(butterfly[3][2] - butterfly[2][2]) < delta_c:
+        butterfly.sort(key=lambda echo: echo[2])
+        if delta_w == 0 or butterfly[3][2] - butterfly[0][2] < delta_w:
             if butterfly[0][0] == butterfly[1][0] and butterfly[0][1] == butterfly[2][1]:
                 return 0
             elif butterfly[0][0] == butterfly[1][0] and butterfly[0][1] == butterfly[3][1]:
@@ -103,8 +104,8 @@ def classify_butterfly(butterfly, delta_w=0, delta_c=0):
 
 
 def classify_butterfly2(b, delta_w=0, delta_c=0):
-    if max(b[0][1], b[1][1], b[2][1], b[3][1]) - min(b[0][1], b[1][1], b[2][1], b[3][1]) < delta_w:
-        if abs(b[0][1] - b[2][1]) < delta_c and abs(b[1][1] - b[1][1]) < delta_c:
+    if abs(b[2][1] - b[0][1]) < delta_c and abs(b[3][1] - b[1][1]) < delta_c:
+        if max(b[0][1], b[1][1], b[2][1], b[3][1]) - min(b[0][1], b[1][1], b[2][1], b[3][1]) < delta_w:
             c = sorted([(-1, b[0][0], b[0][1]), (b[1][0], b[0][0], b[1][1]), (-1, b[2][0], b[2][1]), (b[3][0], b[2][0], b[3][1])], key=lambda echo: echo[2])
             if c[0][0] == c[1][0] and c[0][1] == c[2][1]:
                 return 0
@@ -121,6 +122,70 @@ def classify_butterfly2(b, delta_w=0, delta_c=0):
     return -1
 
 
+def classify_butterfly3(b, delta_w=0, delta_c=0):
+    if abs(b[2][1] - b[0][1]) < delta_c and abs(b[3][1] - b[1][1]) < delta_c:
+        if max(b[0][1], b[1][1], b[2][1], b[3][1]) - min(b[0][1], b[1][1], b[2][1], b[3][1]) < delta_w:
+            if b[0][1] <= b[1][1]:
+                if b[0][1] <= b[2][1]:
+                    if b[1][1] <= b[2][1]:  # a <= b <= c
+                        if b[2][1] <= b[3][1]:
+                            return 3
+                        elif b[1][1] <= b[3][1]:
+                            return 2
+                        elif b[0][1] <= b[3][1]:
+                            return 5
+                        else:
+                            return 4
+                    else:  # a <= c <= b
+                        if b[1][1] <= b[3][1]:
+                            return 0
+                        elif b[2][1] <= b[3][1]:
+                            return 1
+                        elif b[0][1] <= b[3][1]:
+                            return 4
+                        else:
+                            return 5
+                else:  # c <= a <= b
+                    if b[1][1] <= b[3][1]:
+                        return 1
+                    elif b[0][1] <= b[3][1]:
+                        return 0
+                    elif b[2][1] <= b[3][1]:
+                        return 3
+                    else:
+                        return 2
+            else:  # b <= a
+                if b[0][1] <= b[2][1]:  # b <= a <= c
+                    if b[2][1] <= b[3][1]:
+                        return 2
+                    elif b[0][1] <= b[3][1]:
+                        return 3
+                    elif b[1][1] <= b[3][1]:
+                        return 0
+                    else:
+                        return 1
+                else:
+                    if b[1][1] <= b[2][1]:  # b <= c <= a
+                        if b[0][1] <= b[3][1]:
+                            return 5
+                        elif b[2][1] <= b[3][1]:
+                            return 4
+                        elif b[1][1] <= b[3][1]:
+                            return 1
+                        else:
+                            return 0
+                    else:  # c <= b <= a
+                        if b[0][1] <= b[3][1]:
+                            return 4
+                        elif b[1][1] <= b[3][1]:
+                            return 5
+                        elif b[2][1] <= b[3][1]:
+                            return 2
+                        else:
+                            return 3
+    return -1
+
+
 #
 # Classifies all butterflies in a given graph without generating a complete list of butterflies, for space efficiency.
 #
@@ -131,7 +196,7 @@ def classify_without_listing(filepath, num_left_nodes, delta_w=0, delta_c=0):
     g = load_graph(filepath)
     class_counts = [0, 0, 0, 0, 0, 0, 0]
 
-    for i in range(int(num_left_nodes)):
+    for i in range(num_left_nodes):
         paths = defaultdict(list)
         for e1 in g.get_all_edges(i, [g.ep.timestamps]):
             for e2 in g.get_all_edges(e1[1], [g.ep.timestamps]):
@@ -140,7 +205,7 @@ def classify_without_listing(filepath, num_left_nodes, delta_w=0, delta_c=0):
 
         for path_list in paths.values():
             for j, path1 in enumerate(path_list):
-                for path2 in path_list[j + 1:]:
+                for path2 in path_list[j:]:
                     if path1[0][1] != path2[0][1]:
                         class_counts[classify_butterfly(path1 + path2, delta_w, delta_c)] += 1
 
@@ -167,8 +232,10 @@ def classify_without_listing_sorted(filepath, num_left_nodes, delta_w=0, delta_c
 
     for i in range(num_left_nodes):
         paths = defaultdict(list)
+        if i % 100 == 0:
+            print(str(i) + " / " + str(num_left_nodes))
         for e1 in edges[i]:
-            j = bisect.bisect_left([a[1] for a in edges[e1[0]]], e1[1] - delta_c)
+            j = bisect_left([a[1] for a in edges[e1[0]]], e1[1] - delta_c)
             while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) < delta_c:
                 if i < edges[e1[0]][j][0]:
                     paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
@@ -178,11 +245,13 @@ def classify_without_listing_sorted(filepath, num_left_nodes, delta_w=0, delta_c
             #         paths[e2[0]].append([e1, e2])
 
         for path_list in paths.values():
-            for j, path1 in enumerate(path_list):
-                for path2 in path_list[j:]:
+            for k, path1 in enumerate(path_list):
+                for path2 in path_list[k:]:
                     if path1[0][0] != path2[0][0]:
-                        if max(path1[0][1], path1[1][1], path2[0][1], path2[1][1]) - min(path1[0][1], path1[1][1], path2[0][1], path2[1][1]) < delta_w and abs(path1[0][1] - path2[0][1]) < delta_c and abs(path1[1][1] - path2[1][1]) < delta_c:
-                            class_counts[classify_butterfly2(path1 + path2, delta_w, delta_c)] += 1
+                        class_counts[classify_butterfly3(path1 + path2, delta_w, delta_c)] += 1
 
     return class_counts[:6]
 
+
+# cProfile.run('classify_without_listing_sorted("../opsahl-ucforum/out.opsahl-ucforum-pickled.bin", 899, 30000, 10000)')
+# print(classify_without_listing_sorted("../opsahl-ucforum/out.opsahl-ucforum-pickled.bin", 899, 30000000, 10000000))
