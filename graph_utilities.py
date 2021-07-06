@@ -78,7 +78,7 @@ def import_graph_basic_with_sort2(path, num_nodes, num_left_nodes, delimiter='\t
         pickle.dump(edges, pickle_file)
 
 
-def import_graph_temporal_adjacency(path, delimiter='\t'):
+def import_graph_temporal_adjacency(path, num_left_nodes, timestep, delimiter='\t'):
     edges = []
     with open(path) as fd:
         rd = csv.reader(fd, delimiter=delimiter, quotechar='"')
@@ -87,31 +87,31 @@ def import_graph_temporal_adjacency(path, delimiter='\t'):
                 edges.append((int(row[0]), int(row[1]), int(row[3])))
     edges.sort(key=lambda echo: echo[2])
 
-    interarrival_distances = defaultdict(int)
-    for i in range(1, len(edges)):
-        interarrival_distances[edges[i][2] - edges[i-1][2]] += 1
-    total = 0
-    med_dt = 0
-    while total < len(edges) / 2:
-        total += interarrival_distances[med_dt]
-        med_dt += 1
-    med_dt -= 1
+    # interarrival_distances = defaultdict(int)
+    # for i in range(1, len(edges)):
+    #     interarrival_distances[edges[i][2] - edges[i-1][2]] += 1
+    # total = 0
+    # med_dt = 0
+    # while total < len(edges) / 2:
+    #     total += interarrival_distances[med_dt]
+    #     med_dt += 1
+    # med_dt -= 1
 
     min_t = edges[0][2]
     win_temp = {0: [{}, {}]}
 
     t_iter = 0
     for edge in edges:
-        while edge[2] - min_t >= (t_iter + 1) * med_dt:
+        while edge[2] - min_t >= (t_iter + 1) * timestep:
             t_iter += 1
-            if edge[2] - min_t < (t_iter + 1) * med_dt:
+            if edge[2] - min_t < (t_iter + 1) * timestep:
                 win_temp[t_iter] = [{}, {}]
         if edge[0] not in win_temp[t_iter][0]:
             win_temp[t_iter][0][edge[0]] = []
-        if edge[1] not in win_temp[t_iter][1]:
-            win_temp[t_iter][1][edge[1]] = []
-        win_temp[t_iter][0][edge[0]].append((edge[1], edge[2] - min_t))
-        win_temp[t_iter][1][edge[1]].append((edge[0], edge[2] - min_t))
+        if edge[1]+num_left_nodes not in win_temp[t_iter][1]:
+            win_temp[t_iter][1][edge[1]+num_left_nodes] = []
+        win_temp[t_iter][0][edge[0]].append((edge[1]+num_left_nodes, edge[2] - min_t))
+        win_temp[t_iter][1][edge[1]+num_left_nodes].append((edge[0], edge[2] - min_t))
 
     with open(path + "-win-temp-adj.bin", 'wb') as pickle_file:
         pickle.dump(win_temp, pickle_file)
@@ -144,7 +144,7 @@ def check_efficiency(filepath, num_left_nodes):
     return left_sum < right_sum
 
 
-# import_graph_basic_with_sort2("../act-mooc/mooc_actions.tsv", 7144, 97, delimiter='\t')
+# import_graph_basic_with_sort2("../lastfm_band/out.lastfm_band", 175069, 174077, delimiter=' ')
 # import_graph_basic_with_sort("../lastfm_band/out.lastfm_band", datasets["lastfm"][1], datasets["lastfm"][2], delimiter=' ')
 
 # print(check_efficiency(datasets["lastfm"][0], datasets["lastfm"][2]))
@@ -152,9 +152,9 @@ def check_efficiency(filepath, num_left_nodes):
 # for key, val in datasets.items():
 #     print(key + ": " + str(check_efficiency(val[0], val[2])))
 
-# import_graph_temporal_adjacency("../edit-hawiktionary/out.edit-hawiktionary")
+# import_graph_temporal_adjacency("../edit-hawiktionary/out.edit-hawiktionary", 187, 120268)
 
-# with open("../edit-hawiktionary/out.edit-hawiktionary-win-temp-adj.bin", 'rb') as fd:
-#     g = pickle.load(fd)
-# for k, v in g.items():
-#     print(k, v)
+with open("../Data/edit-hawiktionary/out.edit-hawiktionary-win-temp-adj.bin", 'rb') as fd:
+    g = pickle.load(fd)
+for k, v in g.items():
+    print(k, v)
