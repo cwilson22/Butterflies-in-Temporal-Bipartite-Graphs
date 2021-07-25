@@ -157,29 +157,21 @@ def link_shuffle_degree_constrained_t_random(filepath, num_left_nodes, num_shuff
         pickle.dump(new_edges, pickle_file)
 
 
-def time_reverse(filepath, num_left_nodes):
-    with open(filepath + "-pickled.bin", 'rb') as fd:
+def time_reverse(filepath, num_nodes):
+    with open(filepath + "-edges_filtered.bin", 'rb') as fd:
         edges = pickle.load(fd)
 
-    new_edges = [[] for x in range(len(edges))]
-    single_list = []
-    for n, elis in enumerate(edges[:num_left_nodes]):
-        for edge in elis:
-            single_list.append((n, edge[0], edge[1]))
-    single_list.sort(key=lambda echo: echo[2])
+    new_edges = [[] for x in range(num_nodes)]
+    for i in range(len(edges)//2):
+        new_edges[edges[i][0]].append((edges[i][1], edges[len(edges)-i-1][2]))
+        new_edges[edges[i][1]].append((edges[i][0], edges[len(edges)-i-1][2]))
+        new_edges[edges[len(edges)-i-1][0]].append((edges[len(edges)-i-1][1], edges[i][2]))
+        new_edges[edges[len(edges)-i-1][1]].append((edges[len(edges)-i-1][0], edges[i][2]))
 
-    i = 0
-    j = len(single_list)-1
-    while i < j:
-        new_edges[single_list[i][0]].append((single_list[i][1], single_list[j][2]))
-        new_edges[single_list[i][1]].append((single_list[i][0], single_list[j][2]))
-        new_edges[single_list[j][0]].append((single_list[j][1], single_list[i][2]))
-        new_edges[single_list[j][1]].append((single_list[j][0], single_list[i][2]))
-        i += 1
-        j -= 1
-    if i == j:
-        new_edges[single_list[i][0]].append((single_list[i][1], single_list[j][2]))
-        new_edges[single_list[i][1]].append((single_list[i][0], single_list[j][2]))
+    if len(edges) % 2 == 1:
+        i = len(edges)//2
+        new_edges[edges[i][0]].append((edges[i][1], edges[i][2]))
+        new_edges[edges[i][1]].append((edges[i][0], edges[i][2]))
 
     for edge_list in new_edges:
         edge_list.sort(key=lambda echo: echo[1])

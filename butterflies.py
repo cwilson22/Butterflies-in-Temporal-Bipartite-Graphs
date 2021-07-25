@@ -570,7 +570,7 @@ def classify_without_listing_sorted(filepath, num_left_nodes, delta_w=0, delta_c
     for i in range(num_left_nodes):
         paths = defaultdict(list)
         for e1 in edges[i]:
-            j = custom_bisect(edges[e1[0]], e1[1] - delta_c)
+            j = custom_bisect(edges[e1[0]], e1[1] - 3*delta_c)
             while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) <= 3*delta_c:
                 if i < edges[e1[0]][j][0]:
                     paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
@@ -589,12 +589,15 @@ def classify_without_listing_sorted(filepath, num_left_nodes, delta_w=0, delta_c
         return class_counts[:-1]
 
 
-def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, reverse=False):
+def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, reverse=False, ref_given=False):
     if delta_c < 1:
         return "dc too low!"
 
-    with open(filepath, 'rb') as fd:
-        edges = pickle.load(fd)
+    if ref_given:
+        edges = filepath
+    else:
+        with open(filepath, 'rb') as fd:
+            edges = pickle.load(fd)
 
     # class_counts = [0]*22
     class_counts = [0]*7
@@ -602,7 +605,7 @@ def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, rever
     for i in range(num_left_nodes):
         paths = defaultdict(list)
         for e1 in edges[i]:
-            j = custom_bisect(edges[e1[0]], e1[1] - delta_c)
+            j = custom_bisect(edges[e1[0]], e1[1] - 3*delta_c)
             while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) <= 3*delta_c:
                 if i < edges[e1[0]][j][0]:
                     paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
@@ -622,6 +625,111 @@ def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, rever
         return [class_counts[3], class_counts[2], class_counts[1], class_counts[0], class_counts[5], class_counts[4]]
     else:
         return class_counts[:-1]
+
+
+def classify_all_4event(filepath, delta_c, delta_w):
+    with open(filepath, 'rb') as fd:
+        edges = pickle.load(fd)
+
+    counts = [0]*12
+    for i, edge in enumerate(edges):
+        j = i + 1
+        while j < len(edges) and edges[j][2] - edges[i][2] <= delta_w:
+            p1 = shared_node(edges[i], edges[j])
+            if p1 >= 0:
+                k = j + 1
+                while k < len(edges) and (edges[k][2] - edges[j][2] <= delta_c or edges[k][2] - edges[i][2] <= delta_w):
+                    p2 = shared_node(edges[i], edges[k])
+                    p3 = shared_node(edges[j], edges[k])
+                    if p2 >= 0 or p3 >= 0:
+                        m = k + 1
+                        while m < len(edges) and (edges[m][2] - edges[k][2] <= delta_c or edges[m][2] - edges[i][2] <= delta_w):
+                            p4 = shared_node(edges[i], edges[m])
+                            p5 = shared_node(edges[j], edges[m])
+                            p6 = shared_node(edges[k], edges[m])
+                            if p4 >= 0 or p5 >= 0 or p6 >= 0:
+                                counts[classify_4event_shape((p1, p2, p3, p4, p5, p6))] += 1
+                            m += 1
+                    k += 1
+            j += 1
+
+    return counts
+
+
+def classify_all_4event2(filepath, delta_c, delta_w):
+    with open(filepath, 'rb') as fd:
+        edges2 = pickle.load(fd)
+    edges = []
+    for i in range(len(edges2)):
+        edges.append((edges2[len(edges2)-i-1][0], edges2[len(edges2)-i-1][1], edges2[i][2]))
+
+    counts = [0]*12
+    for i, edge in enumerate(edges):
+        j = i + 1
+        while j < len(edges) and edges[j][2] - edges[i][2] <= delta_w:
+            p1 = shared_node(edges[i], edges[j])
+            if p1 >= 0:
+                k = j + 1
+                while k < len(edges) and (edges[k][2] - edges[j][2] <= delta_c or edges[k][2] - edges[i][2] <= delta_w):
+                    p2 = shared_node(edges[i], edges[k])
+                    p3 = shared_node(edges[j], edges[k])
+                    if p2 >= 0 or p3 >= 0:
+                        m = k + 1
+                        while m < len(edges) and (edges[m][2] - edges[k][2] <= delta_c or edges[m][2] - edges[i][2] <= delta_w):
+                            p4 = shared_node(edges[i], edges[m])
+                            p5 = shared_node(edges[j], edges[m])
+                            p6 = shared_node(edges[k], edges[m])
+                            if p4 >= 0 or p5 >= 0 or p6 >= 0:
+                                counts[classify_4event_shape((p1, p2, p3, p4, p5, p6))] += 1
+                            m += 1
+                    k += 1
+            j += 1
+
+    return counts
+
+
+def shared_node(e1, e2):
+    if e1[0] == e2[0]:
+        if e1[1] == e2[1]:
+            return 2
+        return 0
+    if e1[1] == e2[1]:
+        return 1
+    return -1
+
+
+def classify_4event_shape(p_list):
+    same_2_ct = p_list.count(2)
+    left_ct = p_list.count(0)
+    right_ct = p_list.count(1)
+    same_1_ct = left_ct + right_ct
+
+    if same_2_ct == 6:
+        return 0
+    if same_2_ct == 3:
+        return 1
+    if same_2_ct == 2:
+        return 2
+    if same_2_ct == 1:
+        if same_1_ct == 5:
+            return 3
+        if same_1_ct == 4:
+            return 4
+        if same_1_ct == 3:
+            return 5
+    if same_2_ct == 0:
+        if same_1_ct == 6:
+            return 6
+        if same_1_ct == 5:
+            return 7
+        if same_1_ct == 4:
+            if (left_ct == 1 or right_ct == 1) and (left_ct == 3 or right_ct == 3):
+                return 8
+            if left_ct == 2 and right_ct == 2:
+                return 9
+        if same_1_ct == 3:
+            return 10
+    return -1
 
 
 def classify_nodes(filepath, num_nodes, num_left_nodes, left=True, delta_c=0, reverse=False):
@@ -697,9 +805,9 @@ def classify_time_windowed(filepath, timestep, delta_c, reverse=False):
             new_paths = defaultdict(list)
             for e1 in edge_list:
                 for i in range(-c, c+1):
-                    if time+i in edges:
+                    if time+i in edges and e1[0] in edges[time+i][1]:
                         for e2 in edges[time+i][1][e1[0]]:
-                            if e2[0] != node:
+                            if e2[0] > node:
                                 new_paths[e2[0]].append([e1, e2])
 
             # update previous path dictionaries so only last c are stored
@@ -713,6 +821,10 @@ def classify_time_windowed(filepath, timestep, delta_c, reverse=False):
                         for wedge1 in wedge_list:
                             for wedge2 in path_dict[k]:
                                 if wedge1[0][0] != wedge2[0][0]:
+                                    # x = classify_butterfly4(wedge1+wedge2, delta_c)
+                                    # counts[x] += 1
+                                    # if x == 4:
+                                    #     print(node, wedge1+wedge2)
                                     counts[classify_butterfly4(wedge1 + wedge2, delta_c)] += 1
                 for i, wedge1 in enumerate(wedge_list):
                     for wedge2 in wedge_list[i:]:

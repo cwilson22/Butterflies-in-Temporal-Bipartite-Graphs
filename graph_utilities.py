@@ -51,8 +51,8 @@ def import_graph_basic_with_sort(path, num_nodes, num_left_nodes, delimiter='\t'
         rd = csv.reader(fd, delimiter=delimiter, quotechar='"')
         for row in rd:
             if row[0].isnumeric():
-                edges[int(row[0])-1].append((int(row[1])-1+num_left_nodes, int(row[3])))
-                edges[int(row[1])-1+num_left_nodes].append((int(row[0])-1, int(row[3])))
+                edges[int(row[0])].append((int(row[1]), int(float(row[2]))))
+                edges[int(row[1])].append((int(row[0]), int(float(row[2]))))
 
     for edge_list in edges:
         edge_list.sort(key=lambda echo: echo[1])
@@ -84,18 +84,8 @@ def import_graph_temporal_adjacency(path, num_left_nodes, timestep, delimiter='\
         rd = csv.reader(fd, delimiter=delimiter, quotechar='"')
         for row in rd:
             if row[0].isnumeric():
-                edges.append((int(row[0]), int(row[1]), int(row[3])))
+                edges.append((int(row[0]), int(row[1]), int(float(row[3]))))
     edges.sort(key=lambda echo: echo[2])
-
-    # interarrival_distances = defaultdict(int)
-    # for i in range(1, len(edges)):
-    #     interarrival_distances[edges[i][2] - edges[i-1][2]] += 1
-    # total = 0
-    # med_dt = 0
-    # while total < len(edges) / 2:
-    #     total += interarrival_distances[med_dt]
-    #     med_dt += 1
-    # med_dt -= 1
 
     min_t = edges[0][2]
     win_temp = {0: [{}, {}]}
@@ -110,11 +100,43 @@ def import_graph_temporal_adjacency(path, num_left_nodes, timestep, delimiter='\
             win_temp[t_iter][0][edge[0]] = []
         if edge[1]+num_left_nodes not in win_temp[t_iter][1]:
             win_temp[t_iter][1][edge[1]+num_left_nodes] = []
-        win_temp[t_iter][0][edge[0]].append((edge[1]+num_left_nodes, edge[2] - min_t))
-        win_temp[t_iter][1][edge[1]+num_left_nodes].append((edge[0], edge[2] - min_t))
+        win_temp[t_iter][0][edge[0]].append((edge[1]+num_left_nodes, edge[2]-min_t))
+        win_temp[t_iter][1][edge[1]+num_left_nodes].append((edge[0], edge[2]-min_t))
 
     with open(path + "-win-temp-adj.bin", 'wb') as pickle_file:
         pickle.dump(win_temp, pickle_file)
+
+
+def import_graph_filtered_edges(path, num_left_nodes):
+    with open(path, 'rb') as fd:
+        g = pickle.load(fd)
+
+    list_of_edges = []
+    for i, e_list in enumerate(g[:num_left_nodes]):
+        for edge in e_list:
+            list_of_edges.append((i, edge[0], edge[1]))
+
+    list_of_edges.sort(key=lambda echo: echo[2])
+
+    list_of_edges = [list_of_edges[i] for i in range(len(list_of_edges)) if list_of_edges[i-1][2] != list_of_edges[i][2]]
+
+    with open(path.replace('pickled', 'edges_filtered'), 'wb') as pickle_file:
+        pickle.dump(list_of_edges, pickle_file)
+
+
+def import_edges_sorted(path, num_left_nodes):
+    with open(path, 'rb') as fd:
+        g = pickle.load(fd)
+
+    list_of_edges = []
+    for i, e_list in enumerate(g[:num_left_nodes]):
+        for edge in e_list:
+            list_of_edges.append((i, edge[0], edge[1]))
+
+    list_of_edges.sort(key=lambda echo: echo[2])
+
+    with open(path.replace('pickled', 'edges_sorted'), 'wb') as pickle_file:
+        pickle.dump(list_of_edges, pickle_file)
 
 
 def draw_graph(path, num_nodes, num_left_nodes):
@@ -152,9 +174,13 @@ def check_efficiency(filepath, num_left_nodes):
 # for key, val in datasets.items():
 #     print(key + ": " + str(check_efficiency(val[0], val[2])))
 
-# import_graph_temporal_adjacency("../edit-hawiktionary/out.edit-hawiktionary", 187, 120268)
+# import_graph_temporal_adjacency("../Data/edit-hawiktionary/out.edit-hawiktionary", 187, 120268)
 
-with open("../Data/edit-hawiktionary/out.edit-hawiktionary-win-temp-adj.bin", 'rb') as fd:
-    g = pickle.load(fd)
-for k, v in g.items():
-    print(k, v)
+# with open("../Data/edit-hawiktionary/out.edit-hawiktionary-win-temp-adj.bin", 'rb') as fd:
+#     g = pickle.load(fd)
+# for k, v in g.items():
+#     print(k, v)
+
+# import_edges_sorted("../Data/digg-votes/out.digg-votes-pickled.bin", 3553)
+
+# import_graph_basic_with_sort("../Data/covid-tweets/covid-tweets.csv", 611348, 64, delimiter=' ')
