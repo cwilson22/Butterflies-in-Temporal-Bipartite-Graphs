@@ -170,7 +170,7 @@ def time_rev(sorted_list):
 
 def run_classify_all_dc(name, ext, ref=False):
     median = datasets[name][3]
-    for cval in [median / 8, median / 4, median / 2, median, 2 * median, 4 * median, 8 * median, 16 * median, 32 * median, 64 * median, 128 * median]:
+    for cval in [median / 8, median / 4, median / 2, median, 2 * median, 4 * median, 8 * median, 16 * median, 32 * median, 64 * median, 128 * median, 256*median, 512*median]:  #
         if ref:
             print(classify_without_listing_sorted_mod(ext, datasets[name][2],
                                                       round(cval), reverse=datasets[name][4], ref_given=True))
@@ -264,14 +264,23 @@ if __name__ == '__main__':
     #     run_classify_all_dc(nam, 'deg_constrain')
     #     print()
 
-    for nam, dat in datasets.items():
-        print(nam)
-        with open(dat[0].replace('pickled', 'edges_sorted'), 'rb') as f:
-            eds = pickle.load(f)
-        shuffled = time_rev(eds)
-        adjs = sorted_list_to_adj(shuffled, dat[1])
-        run_classify_all_dc(nam, adjs, ref=True)
-        print()
+    # for nam, dat in datasets.items():
+    #     print(nam)
+    #     gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
+    #     # grout = gra.out()
+    #     # ti = grout[0].time
+    #     # tf = grout[-1].time
+    #     print('A')
+    #     lks = tempnet.utils.tij_to_link_timeline(gra)
+    #     print('B')
+    #     shuffled = tempnet.randomisations.P__w_pTheta(lks)
+    #     print('C')
+    #     back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
+    #     print('D')
+    #     adjs = sorted_list_to_adj(back, dat[1])
+    #     print('E')
+    #     run_classify_all_dc(nam, adjs, ref=True)
+    #     print()
 
 
     # with open('../Data/edit-hawiktionary/out.edit-hawiktionary-pickled.bin', 'rb') as f:
@@ -281,9 +290,9 @@ if __name__ == '__main__':
     #
     # dat = datasets["hawiki"]
     # gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
-    # lks = tempnet.utils.tij_to_snapshot_sequence(gra, 1)
-    # shuffled = tempnet.randomisations.P__t_Phi(lks)
-    # back = tempnet.utils.snap_seq_to_sorted_edges(shuffled)
+    # lks = tempnet.utils.tij_to_link_timeline(gra)
+    # shuffled = tempnet.randomisations.P__L_pTheta(lks)
+    # back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
     # back_as_adj = sorted_list_to_adj(back, dat[1])
     # for i, ed in enumerate(back_as_adj):
     #     print(i, ed)

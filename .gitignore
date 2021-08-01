@@ -4,3 +4,4 @@ __pycache__/butterflies.cpython-39.pyc
 *.png
 Interevent Graphs/distr.py
 Interevent Graphs/distribution.py
+*.pyc

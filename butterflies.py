@@ -35,7 +35,6 @@ def enum_butterflies2(filepath, num_left_nodes):
         edges = pickle.load(fd)
     num_butterflies = 0
     for i in range(num_left_nodes):
-        print(num_butterflies)
         c = defaultdict(int)
         d = defaultdict(int)
         for e1 in edges[i]:
