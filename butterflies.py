@@ -1,4 +1,5 @@
 import csv
+import itertools
 from math import ceil
 import random
 import re
@@ -598,7 +599,6 @@ def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, rever
         with open(filepath, 'rb') as fd:
             edges = pickle.load(fd)
 
-    # class_counts = [0]*22
     class_counts = [0]*7
 
     for i in range(num_left_nodes):
@@ -620,8 +620,81 @@ def classify_without_listing_sorted_mod(filepath, num_left_nodes, delta_c, rever
                     j += 1
 
     if reverse:
-        # return [class_counts[3], class_counts[2], class_counts[1], class_counts[0], class_counts[5], class_counts[4], class_counts[9], class_counts[10], class_counts[11], class_counts[6], class_counts[7], class_counts[8], class_counts[12], class_counts[13], class_counts[14], class_counts[16], class_counts[15], class_counts[17], class_counts[18], class_counts[19], class_counts[20]]
         return [class_counts[3], class_counts[2], class_counts[1], class_counts[0], class_counts[5], class_counts[4]]
+    else:
+        return class_counts[:6]
+
+
+def classify_list_by_type(filepath, num_left_nodes, delta_c, reverse=False, ref_given=False):
+    if delta_c < 1:
+        return "dc too low!"
+
+    if ref_given:
+        edges = filepath
+    else:
+        with open(filepath, 'rb') as fd:
+            edges = pickle.load(fd)
+
+    butterflies = [[] for x in range(6)]
+
+    for i in range(num_left_nodes):
+        paths = defaultdict(list)
+        for e1 in edges[i]:
+            j = custom_bisect(edges[e1[0]], e1[1] - 3*delta_c)
+            while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) <= 3*delta_c:
+                if i < edges[e1[0]][j][0]:
+                    paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
+                j += 1
+
+        for path_list in paths.values():
+            path_list.sort(key=lambda echo: echo[0][1])
+            for k, path1 in enumerate(path_list):
+                j = k + 1
+                while j < len(path_list) and path_list[j][0][1] - path1[0][1] <= 3*delta_c:
+                    if path1[0][0] != path_list[j][0][0]:
+                        x = classify_butterfly4(path1 + path_list[j], delta_c)
+                        if x >= 0:
+                            butterflies[x].append((i, path1+path_list[j]))
+                    j += 1
+
+    if reverse:
+        return butterflies
+    else:
+        return butterflies
+
+
+def classify_all_equality_types(filepath, num_left_nodes, delta_c, reverse=False, ref_given=False):
+    if delta_c < 1:
+        return "dc too low!"
+
+    if ref_given:
+        edges = filepath
+    else:
+        with open(filepath, 'rb') as fd:
+            edges = pickle.load(fd)
+
+    class_counts = [0]*22
+
+    for i in range(num_left_nodes):
+        paths = defaultdict(list)
+        for e1 in edges[i]:
+            j = custom_bisect(edges[e1[0]], e1[1] - 3*delta_c)
+            while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) <= 3*delta_c:
+                if i < edges[e1[0]][j][0]:
+                    paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
+                j += 1
+
+        for path_list in paths.values():
+            path_list.sort(key=lambda echo: echo[0][1])
+            for k, path1 in enumerate(path_list):
+                j = k + 1
+                while j < len(path_list) and path_list[j][0][1] - path1[0][1] <= 3*delta_c:
+                    if path1[0][0] != path_list[j][0][0]:
+                        class_counts[classify_butterfly6(path1 + path_list[j], delta_c)] += 1
+                    j += 1
+
+    if reverse:
+        return [class_counts[3], class_counts[2], class_counts[1], class_counts[0], class_counts[5], class_counts[4], class_counts[9], class_counts[10], class_counts[11], class_counts[6], class_counts[7], class_counts[8], class_counts[12], class_counts[13], class_counts[14], class_counts[16], class_counts[15], class_counts[17], class_counts[18], class_counts[19], class_counts[20]]
     else:
         return class_counts[:-1]
 
@@ -655,7 +728,7 @@ def classify_all_4event(filepath, delta_c, delta_w):
     return counts
 
 
-def classify_all_4event2(filepath, delta_c, delta_w):
+def classify_all_4event_t_reversed(filepath, delta_c, delta_w):
     with open(filepath, 'rb') as fd:
         edges2 = pickle.load(fd)
     edges = []
@@ -865,3 +938,101 @@ def compute_median_interarrival_time(filepath, delimiter='\t'):
         total += d[ind]
         print(ind, d[ind], total)
         ind += 1
+
+
+def analyze_per_node_butterflies(filepath, num_left_nodes, delta_c):
+    with open(filepath, 'rb') as fd:
+        edges = pickle.load(fd)
+
+    compiled = []
+    for node in range(num_left_nodes):
+        others = [0]*num_left_nodes
+
+        paths = defaultdict(list)
+        for e1 in edges[node]:
+            j = custom_bisect(edges[e1[0]], e1[1] - 3*delta_c)
+            while j < len(edges[e1[0]]) and abs(edges[e1[0]][j][1] - e1[1]) <= 3*delta_c:
+                if node != edges[e1[0]][j][0]:
+                    paths[edges[e1[0]][j][0]].append([e1, edges[e1[0]][j]])
+                j += 1
+
+        for ap, path_list in paths.items():
+            path_list.sort(key=lambda echo: echo[0][1])
+            for k, path1 in enumerate(path_list):
+                j = k + 1
+                while j < len(path_list) and path_list[j][0][1] - path1[0][1] <= 3*delta_c:
+                    if path1[0][0] != path_list[j][0][0]:
+                        if classify_butterfly6(path1 + path_list[j], delta_c) >= 0:
+                            others[ap] += 1
+                    j += 1
+        compiled.append(others)
+    # keys = []
+    # with open('../Data/covid-tweets/keywords.csv') as f:
+    #     red = csv.reader(f)
+    #     for row in red:
+    #         keys.append(row[1])
+    keys = ['PAY-CHECK', 'MOVE-FUNDS', 'QUICK-PAYMENT', 'DEPOSIT-CASH', 'MAKE-PAYMENT', 'WITHDRAWAL', 'EXCHANGE', 'DEPOSIT-CHECK']
+    to_remove = []
+    for i, row in enumerate(compiled):
+        if sum(row) == 0:
+            to_remove.append(i)
+    for i in range(len(compiled)-1, -1, -1):
+        if i in to_remove:
+            del compiled[i]
+            del keys[i]
+        else:
+            for j in reversed(to_remove):
+                del compiled[i][j]
+    for i, rd in enumerate(compiled):
+        print(keys[i], rd)
+
+
+def list_butterfly_ordering(bt):
+    out = [0]*4
+    bts = sorted([t[1] for t in bt])
+    for i in range(4):
+        out[i] = bts.index(bt[i][1])
+    return out
+
+
+def subtypes(order, ix1, ix2):
+    if order[ix1] == 0:
+        return 2**(order[ix2] - 1) - 1
+    elif order[ix2] == 0:
+        return 2**(order[ix1] - 1) - 1
+    return 2**(order[ix1] - 1) + 2**(order[ix2] - 1) - 1
+
+
+def analyze_good_versus_bad(filepath, num_left_nodes, delta_c, idx_of_gb):
+    butterflies = classify_list_by_type(filepath, num_left_nodes, delta_c)
+    for b_list in butterflies:
+        gb_counts = [0]*28
+        for b in b_list:
+            ct = sum([bt[idx_of_gb] for bt in b[1]])
+            if ct == 0:
+                gb_counts[0] += 1
+            elif ct == 1:
+                x = [bt[idx_of_gb] for bt in b[1]].index(1)
+                y = list_butterfly_ordering(b[1])
+                gb_counts[y[x] + 1] += 1
+            elif ct == 2:
+                y = list_butterfly_ordering(b[1])
+                if b[1][0][idx_of_gb] == 1 and b[1][2][idx_of_gb] == 1:
+                    gb_counts[subtypes(y, 0, 2) + 5] += 1
+                elif b[1][1][idx_of_gb] == 1 and b[1][3][idx_of_gb] == 1:
+                    gb_counts[subtypes(y, 1, 3) + 5] += 1
+                elif b[1][0][idx_of_gb] == 1 and b[1][1][idx_of_gb] == 1:
+                    gb_counts[subtypes(y, 0, 1) + 11] += 1
+                elif b[1][2][idx_of_gb] == 1 and b[1][3][idx_of_gb] == 1:
+                    gb_counts[subtypes(y, 2, 3) + 11] += 1
+                elif b[1][0][idx_of_gb] == 1 and b[1][3][idx_of_gb] == 1:
+                    gb_counts[subtypes(y, 0, 3) + 17] += 1
+                else:
+                    gb_counts[subtypes(y, 1, 2) + 17] += 1
+            elif ct == 3:
+                x = [bt[idx_of_gb] for bt in b[1]].index(0)
+                y = list_butterfly_ordering(b[1])
+                gb_counts[y[x] + 23] += 1
+            else:
+                gb_counts[27] += 1
+        print(sum(gb_counts), sum(gb_counts[1:5]), sum(gb_counts[5:23]), sum(gb_counts[23:27]), gb_counts)

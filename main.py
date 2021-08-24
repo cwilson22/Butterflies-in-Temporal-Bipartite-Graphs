@@ -1,3 +1,4 @@
+import pickle
 import time
 import numpy
 from butterflies import *
@@ -49,7 +50,9 @@ datasets = {
     "lkml": ["../Data/lkml_person-thread/out.lkml_person-thread_person-thread-pickled.bin", 379554, 42045, 159.85570, False, ' '],
     "diggs": ["../Data/digg-votes/out.digg-votes-pickled.bin", 142962, 3553, 0.86198, True],  # backwards, left=139409
     # "lastfm": ["../Data/lastfm_band/out.lastfm_band-pickled.bin", 175069, 992, 6.36454, False, ' ']
-    # "covid": ["../Data/covid-tweets/covid-tweets.csv-pickled.bin", 611348, 64, 0.04243, False, ' ']
+    # "covid": ["../Data/covid-tweets/covid-tweets.csv-pickled.bin", 611348, 76, 0.04243, False, ' ']
+    "jpmorgan": ["../Data/jpmorgan/trans_to_client-pickled.bin", 3001, 8, 12958, False],
+    "jpmorgan2": ["../Data/jpmorgan2/trans_to_sender-pickled.bin", 18411, 8, 759, False]
 }
 
 
@@ -168,9 +171,31 @@ def time_rev(sorted_list):
     return new_edges
 
 
+def shuffle_good_bad(num_left_nodes, num_nodes):
+    with open('../Data/jpmorgan2/trans_to_sender-pickled.bin', 'rb') as f:
+        edges = pickle.load(f)
+
+    new_edges = [[] for i in range(num_nodes)]
+    good_bad = []
+    for edge_list in edges[:num_left_nodes]:
+        for edge in edge_list:
+            good_bad.append(edge[3])
+    random.shuffle(good_bad)
+    j = 0
+    for n, edge_list in enumerate(edges[:num_left_nodes]):
+        for edge in edge_list:
+            new_edges[n].append((edge[0], edge[1], good_bad[j]))
+            new_edges[edge[0]].append((n, edge[1], good_bad[j]))
+            j += 1
+    for e_list in new_edges:
+        e_list.sort(key=lambda echo: echo[1])
+    with open('../Data/jpmorgan2/sender_good_bad_shuffled.bin', 'wb') as f:
+        pickle.dump(new_edges, f)
+
+
 def run_classify_all_dc(name, ext, ref=False):
     median = datasets[name][3]
-    for cval in [median / 8, median / 4, median / 2, median, 2 * median, 4 * median, 8 * median, 16 * median, 32 * median, 64 * median, 128 * median, 256*median, 512*median]:  #
+    for cval in [median / 8, median / 4, median / 2, median, 2 * median, 4 * median, 8 * median, 16 * median, 32 * median, 64 * median, 128 * median]:  # , 256*median, 512*median]:
         if ref:
             print(classify_without_listing_sorted_mod(ext, datasets[name][2],
                                                       round(cval), reverse=datasets[name][4], ref_given=True))
@@ -288,12 +313,35 @@ if __name__ == '__main__':
     # for i, elis in enumerate(edges):
     #     print(i, elis)
     #
-    # dat = datasets["hawiki"]
-    # gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
-    # lks = tempnet.utils.tij_to_link_timeline(gra)
-    # shuffled = tempnet.randomisations.P__L_pTheta(lks)
-    # back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
-    # back_as_adj = sorted_list_to_adj(back, dat[1])
+    dat = datasets["jpmorgan2"]
+    gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
+    lks = tempnet.utils.tij_to_link_timeline(gra)
+    shuffled = tempnet.randomisations.P__pitau_pidtau_t1(lks)
+    back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
+    back_as_adj = sorted_list_to_adj(back, dat[1])
+    run_classify_all_dc("jpmorgan2", back_as_adj, ref=True)
+    #
     # for i, ed in enumerate(back_as_adj):
     #     print(i, ed)
     # print(check_bipartite(back_as_adj))
+
+    # with open('../Data/covid-tweets/covid-tweets-2.csv') as f:
+    #     rd = csv.reader(f, delimiter=' ')
+    #     max_node = 0
+    #     for row in rd:
+    #         if row[1] != '' and int(row[1]) > max_node:
+    #             max_node = int(row[1])
+    # print(max_node)
+
+    # mean = 12958
+    # n_left = 8
+    # for cval in [mean / 8, mean / 4, mean / 2, mean, 2 * mean, 4 * mean, 8 * mean, 16 * mean, 32 * mean, 64 * mean, 128 * mean]:
+    #     print(classify_without_listing_sorted_mod('../Data/jpmorgan/good_bad_shuffled.bin', n_left, delta_c=round(cval)))
+
+    # analyze_per_node_butterflies('../Data/jpmorgan2/trans_to_bene-pickled.bin', 8, 4*759)
+
+    # print(calculate_mean('../Data/covid-tweets/covid-tweets-2.csv-pickled.bin', 76))
+
+    # analyze_good_versus_bad('../Data/jpmorgan/trans_to_client-pickled.bin', 8, 48*12958, 2)
+
+    # shuffle_good_bad(8, 18411)

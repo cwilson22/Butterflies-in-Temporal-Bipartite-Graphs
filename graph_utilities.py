@@ -166,57 +166,52 @@ def check_efficiency(filepath, num_left_nodes):
     return left_sum < right_sum
 
 
-def import_graph_basic_with_sort_jp(path, num_nodes, num_left_nodes, delimiter=','):
+def import_graph_basic_with_sort_jp(path, num_nodes, delimiter=','):
     edges = [[] for x in range(num_nodes)]
 
     with open(path) as fd:
         rd = csv.reader(fd, delimiter=delimiter, quotechar='"')
         for row in rd:
-            if row is not None and row[0] != '':
-                x = row[0]
-                t = int(x[2:4])*86400*372+int(x[5:7])*86400*31+int(x[8:10])*86400+int(x[11:13])*3600+int(x[14:16])*60+int(x[17:19])
-                edges[int(row[0])].append((int(row[1]), int(float(row[2]))))
-                edges[int(row[1])].append((int(row[0]), int(float(row[2]))))
+            if row != [] and row[1] != '':
+                if row[2] == 'GOOD':
+                    gd = 0
+                else:
+                    gd = 1
+                edges[int(row[0])].append((int(row[1]), int(row[3]), gd))
+                edges[int(row[1])].append((int(row[0]), int(row[3]), gd))
 
     for edge_list in edges:
         edge_list.sort(key=lambda echo: echo[1])
 
-    with open(path + "-pickled.bin", 'wb') as pickle_file:
+    with open(path.replace('sanitized_data.csv', 'trans_to_client-pickled.bin'), 'wb') as pickle_file:
         pickle.dump(edges, pickle_file)
 
 
-keywds = {'PAY-CHECK': 0, 'MOVE-FUNDS': 1, 'QUICK-PAYMENT': 2, 'DEPOSIT-CASH': 3, 'MAKE-PAYMENT': 4, 'WITHDRAWAL': 5, 'EXCHANGE': 6, 'DEPOSIT-CHECK': 7}
+keywds = {'MOVE-FUNDS': 0, 'CASH-OUT': 1, 'QUICK-DEPOSIT': 2, 'PAYMENT-IN': 3, 'PAY-BILL': 4, 'CREATE-ACCOUNT': 5, 'DIGITAL-TRANSFER': 6, 'SET-OWNERSHIP-ACCOUNT': 7}
+keywds2 = {'PAY-CHECK': 0, 'MOVE-FUNDS': 1, 'QUICK-PAYMENT': 2, 'DEPOSIT-CASH': 3, 'MAKE-PAYMENT': 4, 'WITHDRAWAL': 5, 'EXCHANGE': 6, 'DEPOSIT-CHECK': 7}
 
 
 def sanitize_data():
-    with open('../Data/jpmorgan2/JPMAIR_synthetic-data-Payment-Fraud-1000-100.csv') as fd:
-        with open('../Data/jpmorgan2/trans_to_client.csv', 'w') as fw:
+    with open('../Data/jpmorgan/JPMAIR_SyntheticData-1100-aml.csv') as fd:
+        with open('../Data/jpmorgan/sanitized_data.csv', 'w') as fw:
             rdr = csv.reader(fd)
             wtr = csv.writer(fw)
             id_ctr = 8
             found_ids = {}
             for row in rdr:
-                if row != [] and row[0] != 'Time_step':
+                if row != [] and row[0] != 'Time step':
                     x = row[0]
                     t = int(x[2:4]) * 86400 * 372 + int(x[5:7]) * 86400 * 31 + int(x[8:10]) * 86400 + int(x[11:13]) * 3600 + int(x[14:16]) * 60 + int(x[17:19])
-                    typ = keywds[row[12]]
-                    good = row[11]
-                    val = row[10]
-                    sender = row[2]
-                    bene = row[7]
-                    sen = ''
-                    ben = ''
-                    if sender != '':
-                        if sender not in found_ids:
-                            found_ids[sender] = id_ctr
+                    typ = keywds[row[2]]
+                    good = row[1]
+                    client = row[3]
+                    cli = ''
+                    if client != '':
+                        if client not in found_ids:
+                            found_ids[client] = id_ctr
                             id_ctr += 1
-                        sen = found_ids[sender]
-                    if bene != '':
-                        if bene not in found_ids:
-                            found_ids[bene] = id_ctr
-                            id_ctr += 1
-                        ben = found_ids[bene]
-                    wtr.writerow((typ, sen, ben, val, good, t))
+                        cli = found_ids[client]
+                        wtr.writerow((typ, cli, good, t))
 
 
 # import_graph_basic_with_sort2("../lastfm_band/out.lastfm_band", 175069, 174077, delimiter=' ')
@@ -234,8 +229,10 @@ def sanitize_data():
 # for k, v in g.items():
 #     print(k, v)
 
-# import_edges_sorted("../Data/digg-votes/out.digg-votes-pickled.bin", 3553)
+# import_edges_sorted("../Data/jpmorgan2/trans_to_sender-pickled.bin", 8)
 
-# import_graph_basic_with_sort("../Data/covid-tweets/covid-tweets.csv", 611348, 64, delimiter=' ')
+# import_graph_basic_with_sort("../Data/covid-tweets/covid-tweets-2.csv", 179227, 76, delimiter=' ')
 
 # sanitize_data()
+
+# import_graph_basic_with_sort_jp('../Data/jpmorgan/sanitized_data.csv', 3001)
