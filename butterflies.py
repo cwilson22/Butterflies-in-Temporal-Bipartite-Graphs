@@ -5,7 +5,7 @@ import random
 import re
 import pickle
 import numpy
-from graph_tool.all import *
+# from graph_tool.all import *
 from collections import defaultdict
 import cProfile
 

@@ -4,7 +4,7 @@ import pickle
 import re
 from collections import defaultdict
 import numpy
-from graph_tool.all import *
+# from graph_tool.all import *
 
 
 datasets = {
@@ -167,23 +167,23 @@ def check_efficiency(filepath, num_left_nodes):
 
 
 def import_graph_basic_with_sort_jp(path, num_nodes, delimiter=','):
-    edges = [[] for x in range(num_nodes)]
+    edges = [[] for x in range(18432 + 18411)]
 
     with open(path) as fd:
         rd = csv.reader(fd, delimiter=delimiter, quotechar='"')
         for row in rd:
-            if row != [] and row[1] != '':
-                if row[2] == 'GOOD':
+            if row != [] and row[1] != '' and row[2] != '':
+                if row[4] == '0':
                     gd = 0
                 else:
                     gd = 1
-                edges[int(row[0])].append((int(row[1]), int(row[3]), gd))
-                edges[int(row[1])].append((int(row[0]), int(row[3]), gd))
+                edges[int(row[1])].append((int(row[2])+num_nodes, int(row[5]), gd))
+                edges[int(row[2])+num_nodes].append((int(row[1]), int(row[5]), gd))
 
     for edge_list in edges:
         edge_list.sort(key=lambda echo: echo[1])
 
-    with open(path.replace('sanitized_data.csv', 'trans_to_client-pickled.bin'), 'wb') as pickle_file:
+    with open(path.replace('trans_to_client.csv', 'sender_to_bene.bin'), 'wb') as pickle_file:
         pickle.dump(edges, pickle_file)
 
 
@@ -235,4 +235,4 @@ def sanitize_data():
 
 # sanitize_data()
 
-# import_graph_basic_with_sort_jp('../Data/jpmorgan/sanitized_data.csv', 3001)
+import_graph_basic_with_sort_jp('../Data/jpmorgan2/trans_to_client.csv', 18410)

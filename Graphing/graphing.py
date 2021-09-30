@@ -6,8 +6,9 @@ from matplotlib.colors import LogNorm
 
 
 if __name__ == '__main__':
-    data = pd.read_csv("Graphing/plotdata")
-    data.index = ['Actual', 'Time-Reversal', 'Inter-Event Shuffling']
+    data = pd.read_csv("Graphing/plotdata", index_col=0)
+    # data.index = ['Actual', 'Time-Reversal', 'Inter-Event Shuffling']
+
     ax = sns.heatmap(data, square=True, norm=LogNorm(), cmap="YlGnBu")
     ax.set_ylim(3, -0.5)
     ax.set_xlim()

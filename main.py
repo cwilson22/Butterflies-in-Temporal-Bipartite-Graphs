@@ -1,9 +1,9 @@
 import pickle
 import time
-import numpy
+# import numpy
 from butterflies import *
 import randomizedgraph
-import tempnet
+# import tempnet
 import csv
 import cProfile
 
@@ -52,7 +52,8 @@ datasets = {
     # "lastfm": ["../Data/lastfm_band/out.lastfm_band-pickled.bin", 175069, 992, 6.36454, False, ' ']
     # "covid": ["../Data/covid-tweets/covid-tweets.csv-pickled.bin", 611348, 76, 0.04243, False, ' ']
     "jpmorgan": ["../Data/jpmorgan/trans_to_client-pickled.bin", 3001, 8, 12958, False],
-    "jpmorgan2": ["../Data/jpmorgan2/trans_to_sender-pickled.bin", 18411, 8, 759, False]
+    "jpmorgan2": ["../Data/jpmorgan2/trans_to_sender-pickled.bin", 18411, 8, 759, False],
+    "jpmorganstb": ["../Data/jpmorgan2/sender_to_bene.bin", 36843, 18411, 919, False]
 }
 
 
@@ -197,10 +198,10 @@ def run_classify_all_dc(name, ext, ref=False):
     median = datasets[name][3]
     for cval in [median / 8, median / 4, median / 2, median, 2 * median, 4 * median, 8 * median, 16 * median, 32 * median, 64 * median, 128 * median]:  # , 256*median, 512*median]:
         if ref:
-            print(classify_without_listing_sorted_mod(ext, datasets[name][2],
-                                                      round(cval), reverse=datasets[name][4], ref_given=True))
+            print('\t'.join(map(str, classify_without_listing_sorted_mod(ext, datasets[name][2],
+                                                      round(cval), reverse=datasets[name][4], ref_given=True))))
         else:
-            print(classify_without_listing_sorted_mod(datasets[name][0].replace('pickled', ext), datasets[name][2], round(cval), reverse=datasets[name][4]))
+            print('\t'.join(map(str, classify_without_listing_sorted_mod(datasets[name][0].replace('pickled', ext), datasets[name][2], round(cval), reverse=datasets[name][4]))))
 
 
 if __name__ == '__main__':
@@ -313,13 +314,15 @@ if __name__ == '__main__':
     # for i, elis in enumerate(edges):
     #     print(i, elis)
     #
-    dat = datasets["jpmorgan2"]
-    gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
-    lks = tempnet.utils.tij_to_link_timeline(gra)
-    shuffled = tempnet.randomisations.P__pitau_pidtau_t1(lks)
-    back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
-    back_as_adj = sorted_list_to_adj(back, dat[1])
-    run_classify_all_dc("jpmorgan2", back_as_adj, ref=True)
+    # dat = datasets["jpmorgan2"]
+    # for i in range(10):
+    #     gra = get_filtered_edges_to_tij(dat[0].replace('pickled', 'edges_sorted'))
+    #     lks = tempnet.utils.tij_to_link_timeline(gra)
+    #     shuffled = tempnet.randomisations.P__pitau_pidtau_t1(lks)
+    #     back = tempnet.utils.link_timeline_to_sorted_edges(shuffled)
+    #     back_as_adj = sorted_list_to_adj(back, dat[1])
+    #     run_classify_all_dc("jpmorgan2", back_as_adj, ref=True)
+
     #
     # for i, ed in enumerate(back_as_adj):
     #     print(i, ed)
@@ -345,3 +348,32 @@ if __name__ == '__main__':
     # analyze_good_versus_bad('../Data/jpmorgan/trans_to_client-pickled.bin', 8, 48*12958, 2)
 
     # shuffle_good_bad(8, 18411)
+
+    # for nam, dat in datasets.items():
+    #     print(nam)
+    #     with open(dat[0], 'rb') as f:
+    #         edges = pickle.load(f)
+    #     edgs = [{} for i in range(dat[2])]
+    #     for n, elis in enumerate(edges[:dat[2]]):
+    #         for ed in elis:
+    #             if ed[0] in edgs[n]:
+    #                 edgs[n][ed[0]] += 1
+    #             else:
+    #                 edgs[n][ed[0]] = 1
+    #     cts = {}
+    #     for di in edgs:
+    #         for ct in di.values():
+    #             if ct in cts:
+    #                 cts[ct] += 1
+    #             else:
+    #                 cts[ct] = 1
+    #     a = list(cts.keys())
+    #     a.sort()
+    #     b = []
+    #     for v in a:
+    #         b.append(cts[v])
+    #     print('\t'.join(map(str, a)))
+    #     print('\t'.join(map(str, b)))
+
+    # print(classify_without_listing_sorted_mod("../Data/jpmorgan2/sender_to_bene.bin", 18411, 100000000, reverse=False))
+    print(enum_butterflies2("../Data/jpmorgan2/sender_to_bene.bin", 18411))
